@@ -67,6 +67,9 @@ class ChatConfig(ConfigBase):
     enable_poke: bool = True
     """是否启用戳一戳功能"""
 
+    ignore_non_self_poke: bool = False
+    """是否无视不是针对自己的戳一戳"""
+
 
 @dataclass
 class VoiceConfig(ConfigBase):

@@ -207,6 +207,11 @@ class NoticeHandler:
             return None, None
 
         else:
+            # 如果配置为忽略不是针对自己的戳一戳，则直接返回None
+            if global_config.chat.ignore_non_self_poke:
+                logger.info("忽略不是针对自己的戳一戳消息")
+                return None, None
+                
             # 老实说这一步判定没啥意义，毕竟私聊是没有其他人之间的戳一戳，但是感觉可以有这个判定来强限制群聊环境
             if group_id:
                 fetched_member_info: dict = await get_member_info(self.server_connection, group_id, target_id)
