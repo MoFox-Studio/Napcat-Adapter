@@ -13,6 +13,7 @@ class CommandType(Enum):
     SEND_POKE = "send_poke"  # 戳一戳
     DELETE_MSG = "delete_msg"  # 撤回消息
     AI_VOICE_SEND = "send_group_ai_record"  # 发送群AI语音
+    SEND_AT_MESSAGE = "send_at_message" # 艾特用户并发送消息
 
     def __str__(self) -> str:
         return self.value

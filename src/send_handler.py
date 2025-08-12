@@ -113,6 +113,8 @@ class SendHandler:
                     command, args_dict = self.delete_msg_command(seg_data.get("args"))
                 case CommandType.AI_VOICE_SEND.name:
                     command, args_dict = self.handle_ai_voice_send_command(seg_data.get("args"), group_info)
+                case CommandType.SEND_AT_MESSAGE.name:
+                    command, args_dict = self.handle_at_message_command(seg_data.get("args"), group_info)
                 case _:
                     logger.error(f"未知命令: {command_name}")
                     return
@@ -539,5 +541,36 @@ class SendHandler:
         except Exception as e:
             logger.error(f"发送适配器命令响应时出错: {e}")
 
+    def handle_at_message_command(self, args: Dict[str, Any], group_info: GroupInfo) -> Tuple[str, Dict[str, Any]]:
+        """处理艾特并发送消息命令
+
+        Args:
+            args (Dict[str, Any]): 参数字典, 包含 qq_id 和 text
+            group_info (GroupInfo): 群聊信息
+
+        Returns:
+            Tuple[str, Dict[str, Any]]: (action, params)
+        """
+        at_user_id = args.get("qq_id")
+        text = args.get("text")
+
+        if not at_user_id or not text:
+            raise ValueError("艾特消息命令缺少 qq_id 或 text 参数")
+
+        if not group_info:
+            raise ValueError("艾特消息命令必须在群聊上下文中使用")
+
+        message_payload = [
+            {"type": "at", "data": {"qq": str(at_user_id)}},
+            {"type": "text", "data": {"text": " " + str(text)}},
+        ]
+
+        return (
+            "send_group_msg",
+            {
+                "group_id": group_info.group_id,
+                "message": message_payload,
+            },
+        )
 
 send_handler = SendHandler()
