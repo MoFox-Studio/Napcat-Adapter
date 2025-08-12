@@ -1,4 +1,5 @@
 import json
+import time
 import websockets as Server
 import uuid
 from maim_message import (
@@ -32,6 +33,8 @@ class SendHandler:
         logger.info("接收到来自MaiBot的消息，处理中")
         if message_segment.type == "command":
             return await self.send_command(raw_message_base)
+        elif message_segment.type == "adapter_command":
+            return await self.handle_adapter_command(raw_message_base)
         else:
             return await self.send_normal_message(raw_message_base)
 
@@ -126,6 +129,51 @@ class SendHandler:
             logger.info(f"命令 {command_name} 执行成功")
         else:
             logger.warning(f"命令 {command_name} 执行失败，napcat返回：{str(response)}")
+
+    async def handle_adapter_command(self, raw_message_base: MessageBase) -> None:
+        """
+        处理适配器命令类 - 用于直接向Napcat发送命令并返回结果
+        """
+        logger.info("处理适配器命令中")
+        message_info: BaseMessageInfo = raw_message_base.message_info
+        message_segment: Seg = raw_message_base.message_segment
+        seg_data: Dict[str, Any] = message_segment.data
+        
+        try:
+            action = seg_data.get("action")
+            params = seg_data.get("params", {})
+            request_id = seg_data.get("request_id")
+            
+            if not action:
+                logger.error("适配器命令缺少action参数")
+                await self.send_adapter_command_response(
+                    raw_message_base, 
+                    {"status": "error", "message": "缺少action参数"}, 
+                    request_id
+                )
+                return
+
+            logger.info(f"执行适配器命令: {action}")
+            
+            # 直接向Napcat发送命令并获取响应
+            response = await self.send_message_to_napcat(action, params)
+            
+            # 发送响应回MaiBot
+            await self.send_adapter_command_response(raw_message_base, response, request_id)
+            
+            if response.get("status") == "ok":
+                logger.info(f"适配器命令 {action} 执行成功")
+            else:
+                logger.warning(f"适配器命令 {action} 执行失败，napcat返回：{str(response)}")
+                
+        except Exception as e:
+            logger.error(f"处理适配器命令时发生错误: {e}")
+            error_response = {"status": "error", "message": str(e)}
+            await self.send_adapter_command_response(
+                raw_message_base, 
+                error_response, 
+                seg_data.get("request_id")
+            )
 
     def get_level(self, seg_data: Seg) -> int:
         if seg_data.type == "seglist":
@@ -456,6 +504,40 @@ class SendHandler:
         await message_send_instance.message_send(message_base)
         logger.debug("已回送消息ID")
         return
+
+    async def send_adapter_command_response(
+        self, original_message: MessageBase, response_data: dict, request_id: str
+    ) -> None:
+        """
+        发送适配器命令响应回MaiBot
+        
+        Args:
+            original_message: 原始消息
+            response_data: 响应数据
+            request_id: 请求ID
+        """
+        try:
+            # 修改 additional_config，添加 echo 字段
+            if original_message.message_info.additional_config is None:
+                original_message.message_info.additional_config = {}
+
+            original_message.message_info.additional_config["echo"] = True
+
+            # 修改 message_segment 为 adapter_response 类型
+            original_message.message_segment = Seg(
+                type="adapter_response", 
+                data={
+                    "request_id": request_id,
+                    "response": response_data,
+                    "timestamp": int(time.time() * 1000)
+                }
+            )
+            
+            await message_send_instance.message_send(original_message)
+            logger.debug(f"已发送适配器命令响应，request_id: {request_id}")
+            
+        except Exception as e:
+            logger.error(f"发送适配器命令响应时出错: {e}")
 
 
 send_handler = SendHandler()
