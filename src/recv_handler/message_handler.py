@@ -11,10 +11,13 @@ from src.utils import (
 from .qq_emoji_list import qq_face
 from .message_sending import message_send_instance
 from . import RealMessageType, MessageType, ACCEPT_FORMAT
+from src.video_handler import get_video_downloader
 
 import time
 import json
 import websockets as Server
+import base64
+from pathlib import Path
 from typing import List, Tuple, Optional, Dict, Any
 import uuid
 
@@ -296,7 +299,11 @@ class MessageHandler:
                     else:
                         logger.warning("record处理失败或不支持")
                 case RealMessageType.video:
-                    logger.warning("不支持视频解析")
+                    ret_seg = await self.handle_video_message(sub_message)
+                    if ret_seg:
+                        seg_message.append(ret_seg)
+                    else:
+                        logger.warning("video处理失败")
                 case RealMessageType.at:
                     ret_seg = await self.handle_at_message(
                         sub_message,
@@ -440,6 +447,86 @@ class MessageHandler:
             logger.error("语音消息处理失败，未获取到音频数据")
             return None
         return Seg(type="voice", data=audio_base64)
+
+    async def handle_video_message(self, raw_message: dict) -> Seg | None:
+        """
+        处理视频消息
+        Parameters:
+            raw_message: dict: 原始消息
+        Returns:
+            seg_data: Seg: 处理后的消息段
+        """
+        message_data: dict = raw_message.get("data")
+        
+        # 添加详细的调试信息
+        logger.debug(f"视频消息原始数据: {raw_message}")
+        logger.debug(f"视频消息数据: {message_data}")
+        
+        # QQ视频消息可能包含url或filePath字段
+        video_url = message_data.get("url")
+        file_path = message_data.get("filePath") or message_data.get("file_path")
+        
+        logger.info(f"视频URL: {video_url}")
+        logger.info(f"视频文件路径: {file_path}")
+        
+        # 优先使用本地文件路径，其次使用URL
+        video_source = file_path if file_path else video_url
+        
+        if not video_source:
+            logger.warning("视频消息缺少URL或文件路径信息")
+            logger.warning(f"完整消息数据: {message_data}")
+            return None
+        
+        try:
+            # 检查是否为本地文件路径
+            if file_path and Path(file_path).exists():
+                logger.info(f"使用本地视频文件: {file_path}")
+                # 直接读取本地文件
+                with open(file_path, "rb") as f:
+                    video_data = f.read()
+                
+                # 将视频数据编码为base64用于传输
+                video_base64 = base64.b64encode(video_data).decode('utf-8')
+                logger.info(f"视频文件大小: {len(video_data) / (1024 * 1024):.2f} MB")
+                
+                # 返回包含详细信息的字典格式
+                return Seg(type="video", data={
+                    "base64": video_base64,
+                    "filename": Path(file_path).name,
+                    "size_mb": len(video_data) / (1024 * 1024)
+                })
+            
+            elif video_url:
+                logger.info(f"使用视频URL下载: {video_url}")
+                # 使用video_handler下载视频
+                video_downloader = get_video_downloader()
+                download_result = await video_downloader.download_video(video_url)
+                
+                if not download_result["success"]:
+                    logger.warning(f"视频下载失败: {download_result.get('error', '未知错误')}")
+                    logger.warning(f"失败的URL: {video_url}")
+                    return None
+                
+                # 将视频数据编码为base64用于传输
+                video_base64 = base64.b64encode(download_result["data"]).decode('utf-8')
+                logger.info(f"视频下载成功，大小: {len(download_result['data']) / (1024 * 1024):.2f} MB")
+                
+                # 返回包含详细信息的字典格式
+                return Seg(type="video", data={
+                    "base64": video_base64,
+                    "filename": download_result.get("filename", "video.mp4"),
+                    "size_mb": len(download_result["data"]) / (1024 * 1024),
+                    "url": video_url
+                })
+            
+            else:
+                logger.warning("既没有有效的本地文件路径，也没有有效的视频URL")
+                return None
+                
+        except Exception as e:
+            logger.error(f"视频消息处理失败: {str(e)}")
+            logger.error(f"视频源: {video_source}")
+            return None
 
     async def handle_reply_message(self, raw_message: dict) -> List[Seg] | None:
         # sourcery skip: move-assign-in-block, use-named-expression

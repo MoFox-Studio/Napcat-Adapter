@@ -32,5 +32,11 @@ poke_debounce_seconds = 3 # 戳一戳防抖时间（秒），在指定时间内�
 [voice] # 发送语音设置
 use_tts = false # 是否使用tts语音（请确保你配置了tts并有对应的adapter）
 
+[video] # 视频处理设置
+enable_video_analysis = true # 是否启用视频识别功能
+max_video_size_mb = 100      # 视频文件最大大小限制（MB）
+download_timeout = 60        # 视频下载超时时间（秒）
+supported_formats = ["mp4", "avi", "mov", "mkv", "flv", "wmv", "webm"] # 支持的视频格式
+
 [debug]
 level = "INFO" # 日志等级（DEBUG, INFO, WARNING, ERROR, CRITICAL）
