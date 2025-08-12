@@ -29,7 +29,8 @@ class NoticeHandler:
     lifted_list: list[BanUser] = []  # 已经自然解除禁言
 
     def __init__(self):
-        self.server_connection: Server.ServerConnection = None
+        self.server_connection: Server.ServerConnection | None = None
+        self.last_poke_time: float = 0.0  # 记录最后一次针对机器人的戳一戳时间
 
     async def set_server_connection(self, server_connection: Server.ServerConnection) -> None:
         """设置Napcat连接"""
@@ -182,6 +183,21 @@ class NoticeHandler:
 
         self_id = raw_message.get("self_id")
         target_id = raw_message.get("target_id")
+        
+        # 防抖检查：如果是针对机器人的戳一戳，检查防抖时间
+        if self_id == target_id:
+            current_time = time.time()
+            debounce_seconds = global_config.chat.poke_debounce_seconds
+            
+            if self.last_poke_time > 0:
+                time_diff = current_time - self.last_poke_time
+                if time_diff < debounce_seconds:
+                    logger.info(f"戳一戳防抖：用户 {user_id} 的戳一戳被忽略（距离上次戳一戳 {time_diff:.2f} 秒）")
+                    return None, None
+            
+            # 记录这次戳一戳的时间
+            self.last_poke_time = current_time
+        
         target_name: str = None
         raw_info: list = raw_message.get("raw_info")
 
@@ -516,6 +532,8 @@ class NoticeHandler:
                 logger.error(f"发送通知消息失败: {str(e)}")
                 await unsuccessful_notice_queue.put(to_be_send)
             await asyncio.sleep(1)
+
+
 
 
 notice_handler = NoticeHandler()

@@ -49,16 +49,16 @@ class ChatConfig(ConfigBase):
     group_list_type: Literal["whitelist", "blacklist"] = "whitelist"
     """群聊列表类型 白名单/黑名单"""
 
-    group_list: list[int] = field(default_factory=[])
+    group_list: list[int] = field(default_factory=list)
     """群聊列表"""
 
     private_list_type: Literal["whitelist", "blacklist"] = "whitelist"
     """私聊列表类型 白名单/黑名单"""
 
-    private_list: list[int] = field(default_factory=[])
+    private_list: list[int] = field(default_factory=list)
     """私聊列表"""
 
-    ban_user_id: list[int] = field(default_factory=[])
+    ban_user_id: list[int] = field(default_factory=list)
     """被封禁的用户ID列表，封禁后将无法与其进行交互"""
 
     ban_qq_bot: bool = False
@@ -69,6 +69,9 @@ class ChatConfig(ConfigBase):
 
     ignore_non_self_poke: bool = False
     """是否无视不是针对自己的戳一戳"""
+
+    poke_debounce_seconds: int = 3
+    """戳一戳防抖时间（秒），在指定时间内第二次针对机器人的戳一戳将被忽略"""
 
 
 @dataclass
