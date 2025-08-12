@@ -111,7 +111,7 @@ class SendHandler:
                 case CommandType.AI_VOICE_SEND.name:
                     command, args_dict = self.handle_ai_voice_send_command(seg_data.get("args"), group_info)
                 case CommandType.SEND_AT_MESSAGE.name:
-                    command, args_dict = self.handle_at_message_command(args, group_info)
+                    command, args_dict = self.handle_at_message_command(seg_data.get("args"), group_info)
                 case _:
                     logger.error(f"未知命令: {command_name}")
                     return
