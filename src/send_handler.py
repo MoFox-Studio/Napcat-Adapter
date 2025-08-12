@@ -2,6 +2,7 @@ import json
 import time
 import websockets as Server
 import uuid
+import asyncio
 from maim_message import (
     UserInfo,
     GroupInfo,
@@ -158,8 +159,8 @@ class SendHandler:
             logger.info(f"执行适配器命令: {action}")
             
             # 直接向Napcat发送命令并获取响应
-            response = await self.send_message_to_napcat(action, params)
-            
+            response = asyncio.create_task(self.send_message_to_napcat(action, params))
+
             # 发送响应回MaiBot
             await self.send_adapter_command_response(raw_message_base, response, request_id)
             
