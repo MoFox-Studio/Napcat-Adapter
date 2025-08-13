@@ -33,7 +33,7 @@ class WebSocketManager:
         
         logger.info(f"正在启动反向连接模式，监听地址: ws://{host}:{port}")
         
-        async def handle_client(websocket, path):
+        async def handle_client(websocket):
             self.connection = websocket
             logger.info(f"Napcat 客户端已连接: {websocket.remote_address}")
             try:
