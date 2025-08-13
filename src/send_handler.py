@@ -41,10 +41,13 @@ class SendHandler:
         message_segment: Seg = raw_message_base.message_segment
         logger.info("接收到来自MaiBot的消息，处理中")
         if message_segment.type == "command":
+            logger.info("处理命令")
             return await self.send_command(raw_message_base)
         elif message_segment.type == "adapter_command":
+            logger.info("处理适配器命令")
             return await self.handle_adapter_command(raw_message_base)
         else:
+            logger.info("处理普通消息")
             return await self.send_normal_message(raw_message_base)
 
     async def send_normal_message(self, raw_message_base: MessageBase) -> None:
