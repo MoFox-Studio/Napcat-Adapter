@@ -12,6 +12,7 @@ from .qq_emoji_list import qq_face
 from .message_sending import message_send_instance
 from . import RealMessageType, MessageType, ACCEPT_FORMAT
 from src.video_handler import get_video_downloader
+from src.websocket_manager import websocket_manager
 
 import time
 import json
@@ -43,6 +44,13 @@ class MessageHandler:
     async def set_server_connection(self, server_connection: Server.ServerConnection) -> None:
         """设置Napcat连接"""
         self.server_connection = server_connection
+
+    def get_server_connection(self) -> Server.ServerConnection:
+        """获取当前的服务器连接"""
+        # 优先使用直接设置的连接，否则从 websocket_manager 获取
+        if self.server_connection:
+            return self.server_connection
+        return websocket_manager.get_connection()
 
     async def check_allow_to_chat(
         self,
@@ -84,7 +92,7 @@ class MessageHandler:
 
         if global_config.chat.ban_qq_bot and group_id and not ignore_bot:
             logger.debug("开始判断是否为机器人")
-            member_info = await get_member_info(self.server_connection, group_id, user_id)
+            member_info = await get_member_info(self.get_server_connection(), group_id, user_id)
             if member_info:
                 is_bot = member_info.get("is_robot")
                 if is_bot is None:
@@ -146,7 +154,7 @@ class MessageHandler:
 
                 # 由于临时会话中，Napcat默认不发送成员昵称，所以需要单独获取
                 fetched_member_info: dict = await get_member_info(
-                    self.server_connection,
+                    self.get_server_connection(),
                     raw_message.get("group_id"),
                     sender_info.get("user_id"),
                 )
@@ -162,7 +170,7 @@ class MessageHandler:
                 # -------------------这里需要群信息吗？-------------------
 
                 # 获取群聊相关信息，在此单独处理group_name，因为默认发送的消息中没有
-                fetched_group_info: dict = await get_group_info(self.server_connection, raw_message.get("group_id"))
+                fetched_group_info: dict = await get_group_info(self.get_server_connection(), raw_message.get("group_id"))
                 group_name = ""
                 if fetched_group_info.get("group_name"):
                     group_name = fetched_group_info.get("group_name")
@@ -193,7 +201,7 @@ class MessageHandler:
                 )
 
                 # 获取群聊相关信息，在此单独处理group_name，因为默认发送的消息中没有
-                fetched_group_info = await get_group_info(self.server_connection, raw_message.get("group_id"))
+                fetched_group_info = await get_group_info(self.get_server_connection(), raw_message.get("group_id"))
                 group_name: str = None
                 if fetched_group_info:
                     group_name = fetched_group_info.get("group_name")
@@ -409,13 +417,13 @@ class MessageHandler:
             qq_id = message_data.get("qq")
             if str(self_id) == str(qq_id):
                 logger.debug("机器人被at")
-                self_info: dict = await get_self_info(self.server_connection)
+                self_info: dict = await get_self_info(self.get_server_connection())
                 if self_info:
                     return Seg(type="text", data=f"@<{self_info.get('nickname')}:{self_info.get('user_id')}>")
                 else:
                     return None
             else:
-                member_info: dict = await get_member_info(self.server_connection, group_id=group_id, user_id=qq_id)
+                member_info: dict = await get_member_info(self.get_server_connection(), group_id=group_id, user_id=qq_id)
                 if member_info:
                     return Seg(type="text", data=f"@<{member_info.get('nickname')}:{member_info.get('user_id')}>")
                 else:
@@ -435,7 +443,7 @@ class MessageHandler:
             logger.warning("语音消息缺少文件信息")
             return None
         try:
-            record_detail = await get_record_detail(self.server_connection, file)
+            record_detail = await get_record_detail(self.get_server_connection(), file)
             if not record_detail:
                 logger.warning("获取语音消息详情失败")
                 return None
@@ -540,7 +548,7 @@ class MessageHandler:
             message_id = raw_message_data.get("id")
         else:
             return None
-        message_detail: dict = await get_message_detail(self.server_connection, message_id)
+        message_detail: dict = await get_message_detail(self.get_server_connection(), message_id)
         if not message_detail:
             logger.warning("获取被引用的消息详情失败")
             return None
@@ -733,7 +741,11 @@ class MessageHandler:
             }
         )
         try:
-            await self.server_connection.send(payload)
+            connection = self.get_server_connection()
+            if not connection:
+                logger.error("没有可用的 WebSocket 连接")
+                return None
+            await connection.send(payload)
             response: dict = await get_response(request_uuid)
         except TimeoutError:
             logger.error("获取转发消息超时")

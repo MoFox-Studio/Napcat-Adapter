@@ -22,14 +22,23 @@ class NicknameConfig(ConfigBase):
 
 @dataclass
 class NapcatServerConfig(ConfigBase):
+    mode: Literal["reverse", "forward"] = "reverse"
+    """连接模式：reverse=反向连接(作为服务器), forward=正向连接(作为客户端)"""
+
     host: str = "localhost"
-    """Napcat服务端的主机地址"""
+    """主机地址"""
 
     port: int = 8095
-    """Napcat服务端的端口号"""
+    """端口号"""
+
+    url: str = ""
+    """正向连接时的完整WebSocket URL，如 ws://localhost:8080/ws"""
+
+    access_token: str = ""
+    """WebSocket 连接的访问令牌，用于身份验证"""
 
     heartbeat_interval: int = 30
-    """Napcat心跳间隔时间，单位为秒"""
+    """心跳间隔时间，单位为秒"""
 
 
 @dataclass

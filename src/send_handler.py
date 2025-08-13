@@ -18,6 +18,7 @@ from .response_pool import get_response
 from .logger import logger
 from .utils import get_image_format, convert_image_to_gif
 from .recv_handler.message_sending import message_send_instance
+from .websocket_manager import websocket_manager
 
 
 class SendHandler:
@@ -27,6 +28,13 @@ class SendHandler:
     async def set_server_connection(self, server_connection: Server.ServerConnection) -> None:
         """设置Napcat连接"""
         self.server_connection = server_connection
+
+    def get_server_connection(self) -> Server.ServerConnection:
+        """获取当前的服务器连接"""
+        # 优先使用直接设置的连接，否则从 websocket_manager 获取
+        if self.server_connection:
+            return self.server_connection
+        return websocket_manager.get_connection()
 
     async def handle_message(self, raw_message_base_dict: dict) -> None:
         raw_message_base: MessageBase = MessageBase.from_dict(raw_message_base_dict)
@@ -480,8 +488,15 @@ class SendHandler:
     async def send_message_to_napcat(self, action: str, params: dict) -> dict:
         request_uuid = str(uuid.uuid4())
         payload = json.dumps({"action": action, "params": params, "echo": request_uuid})
-        await self.server_connection.send(payload)
+        
+        # 获取当前连接
+        connection = self.get_server_connection()
+        if not connection:
+            logger.error("没有可用的 Napcat 连接")
+            return {"status": "error", "message": "no connection"}
+        
         try:
+            await connection.send(payload)
             response = await get_response(request_uuid)
         except TimeoutError:
             logger.error("发送消息超时，未收到响应")

@@ -11,6 +11,7 @@ from . import NoticeType, ACCEPT_FORMAT
 from .message_sending import message_send_instance
 from .message_handler import message_handler
 from maim_message import FormatInfo, UserInfo, GroupInfo, Seg, BaseMessageInfo, MessageBase
+from src.websocket_manager import websocket_manager
 
 from src.utils import (
     get_group_info,
@@ -43,6 +44,13 @@ class NoticeHandler:
         asyncio.create_task(self.auto_lift_detect())
         asyncio.create_task(self.send_notice())
         asyncio.create_task(self.handle_natural_lift())
+
+    def get_server_connection(self) -> Server.ServerConnection:
+        """获取当前的服务器连接"""
+        # 优先使用直接设置的连接，否则从 websocket_manager 获取
+        if self.server_connection:
+            return self.server_connection
+        return websocket_manager.get_connection()
 
     def _ban_operation(self, group_id: int, user_id: Optional[int] = None, lift_time: Optional[int] = None) -> None:
         """
@@ -133,7 +141,7 @@ class NoticeHandler:
 
         group_info: GroupInfo = None
         if group_id:
-            fetched_group_info = await get_group_info(self.server_connection, group_id)
+            fetched_group_info = await get_group_info(self.get_server_connection(), group_id)
             group_name: str = None
             if fetched_group_info:
                 group_name = fetched_group_info.get("group_name")
@@ -175,7 +183,7 @@ class NoticeHandler:
         self, raw_message: dict, group_id: int, user_id: int
     ) -> Tuple[Seg | None, UserInfo | None]:
         # sourcery skip: merge-comparisons, merge-duplicate-blocks, remove-redundant-if, remove-unnecessary-else, swap-if-else-branches
-        self_info: dict = await get_self_info(self.server_connection)
+        self_info: dict = await get_self_info(self.get_server_connection())
 
         if not self_info:
             logger.error("自身信息获取失败")
@@ -202,9 +210,9 @@ class NoticeHandler:
         raw_info: list = raw_message.get("raw_info")
 
         if group_id:
-            user_qq_info: dict = await get_member_info(self.server_connection, group_id, user_id)
+            user_qq_info: dict = await get_member_info(self.get_server_connection(), group_id, user_id)
         else:
-            user_qq_info: dict = await get_stranger_info(self.server_connection, user_id)
+            user_qq_info: dict = await get_stranger_info(self.get_server_connection(), user_id)
         if user_qq_info:
             user_name = user_qq_info.get("nickname")
             user_cardname = user_qq_info.get("card")
@@ -230,7 +238,7 @@ class NoticeHandler:
                 
             # 老实说这一步判定没啥意义，毕竟私聊是没有其他人之间的戳一戳，但是感觉可以有这个判定来强限制群聊环境
             if group_id:
-                fetched_member_info: dict = await get_member_info(self.server_connection, group_id, target_id)
+                fetched_member_info: dict = await get_member_info(self.get_server_connection(), group_id, target_id)
                 if fetched_member_info:
                     target_name = fetched_member_info.get("nickname")
                 else:
@@ -271,7 +279,7 @@ class NoticeHandler:
         operator_nickname: str = None
         operator_cardname: str = None
 
-        member_info: dict = await get_member_info(self.server_connection, group_id, operator_id)
+        member_info: dict = await get_member_info(self.get_server_connection(), group_id, operator_id)
         if member_info:
             operator_nickname = member_info.get("nickname")
             operator_cardname = member_info.get("card")
@@ -304,7 +312,7 @@ class NoticeHandler:
         else:  # 为单人禁言
             # 获取被禁言人的信息
             sub_type: str = "ban"
-            fetched_member_info: dict = await get_member_info(self.server_connection, group_id, user_id)
+            fetched_member_info: dict = await get_member_info(self.get_server_connection(), group_id, user_id)
             if fetched_member_info:
                 user_nickname = fetched_member_info.get("nickname")
                 user_cardname = fetched_member_info.get("card")
@@ -339,7 +347,7 @@ class NoticeHandler:
         operator_nickname: str = None
         operator_cardname: str = None
 
-        member_info: dict = await get_member_info(self.server_connection, group_id, operator_id)
+        member_info: dict = await get_member_info(self.get_server_connection(), group_id, operator_id)
         if member_info:
             operator_nickname = member_info.get("nickname")
             operator_cardname = member_info.get("card")
@@ -367,7 +375,7 @@ class NoticeHandler:
         else:  # 单人禁言解除
             sub_type = "lift_ban"
             # 获取被解除禁言人的信息
-            fetched_member_info: dict = await get_member_info(self.server_connection, group_id, user_id)
+            fetched_member_info: dict = await get_member_info(self.get_server_connection(), group_id, user_id)
             if fetched_member_info:
                 user_nickname = fetched_member_info.get("nickname")
                 user_cardname = fetched_member_info.get("card")
@@ -410,7 +418,7 @@ class NoticeHandler:
 
                 seg_message: Seg = await self.natural_lift(group_id, user_id)
 
-                fetched_group_info = await get_group_info(self.server_connection, group_id)
+                fetched_group_info = await get_group_info(self.get_server_connection(), group_id)
                 group_name: str = None
                 if fetched_group_info:
                     group_name = fetched_group_info.get("group_name")
@@ -468,7 +476,7 @@ class NoticeHandler:
 
         user_nickname: str = "QQ用户"
         user_cardname: str = None
-        fetched_member_info: dict = await get_member_info(self.server_connection, group_id, user_id)
+        fetched_member_info: dict = await get_member_info(self.get_server_connection(), group_id, user_id)
         if fetched_member_info:
             user_nickname = fetched_member_info.get("nickname")
             user_cardname = fetched_member_info.get("card")

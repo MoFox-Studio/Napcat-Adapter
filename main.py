@@ -11,6 +11,7 @@ from src.send_handler import send_handler
 from src.config import global_config
 from src.mmc_com_layer import mmc_start_com, mmc_stop_com, router
 from src.response_pool import put_response, check_timeout_response
+from src.websocket_manager import websocket_manager
 
 message_queue = asyncio.Queue()
 
@@ -51,23 +52,33 @@ async def main():
 
 
 async def napcat_server():
-    logger.info("正在启动adapter...")
-    async with Server.serve(message_recv, global_config.napcat_server.host, global_config.napcat_server.port, max_size=2**26) as server:
-        logger.info(
-            f"Adapter已启动，监听地址: ws://{global_config.napcat_server.host}:{global_config.napcat_server.port}"
-        )
-        await server.serve_forever()
+    """启动 Napcat WebSocket 连接（支持正向和反向连接）"""
+    mode = global_config.napcat_server.mode
+    logger.info(f"正在启动 adapter，连接模式: {mode}")
+    
+    try:
+        await websocket_manager.start_connection(message_recv)
+    except Exception as e:
+        logger.error(f"启动 WebSocket 连接失败: {e}")
+        raise
 
 
 async def graceful_shutdown():
     try:
         logger.info("正在关闭adapter...")
+        
+        # 首先关闭 WebSocket 连接
+        await websocket_manager.stop_connection()
+        
+        # 关闭其他任务
         tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
         for task in tasks:
             if not task.done():
                 task.cancel()
         await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), 15)
-        await mmc_stop_com()  # 后置避免神秘exception
+        
+        # 最后关闭 MaiBot 连接
+        await mmc_stop_com()
         logger.info("Adapter已成功关闭")
     except Exception as e:
         logger.error(f"Adapter关闭中出现错误: {e}")

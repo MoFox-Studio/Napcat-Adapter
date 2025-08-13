@@ -1,14 +1,17 @@
 [inner]
-version = "0.1.1" # 版本号
+version = "0.1.22" # 版本号
 # 请勿修改版本号，除非你知道自己在做什么
 
 [nickname] # 现在没用
 nickname = ""
 
 [napcat_server] # Napcat连接的ws服务设置
-host = "localhost"      # Napcat设定的主机地址
-port = 8095             # Napcat设定的端口 
-heartbeat_interval = 30 # 与Napcat设置的心跳相同（按秒计）
+mode = "reverse"        # 连接模式：reverse=反向连接(作为服务器), forward=正向连接(作为客户端)
+host = "localhost"      # 主机地址
+port = 8095             # 端口号
+url = ""                # 正向连接时的完整WebSocket URL，如 ws://localhost:8080/ws (仅在forward模式下使用)
+access_token = ""       # WebSocket 连接的访问令牌，用于身份验证（可选）
+heartbeat_interval = 30 # 心跳间隔时间（按秒计）
 
 [maibot_server] # 连接麦麦的ws服务设置
 host = "localhost" # 麦麦在.env文件中设置的主机地址，即HOST字段

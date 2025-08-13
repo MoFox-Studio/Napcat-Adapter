@@ -15,6 +15,7 @@
 - 🛡️ 内置心跳检测和连接管理
 - 🎯 优雅的消息队列处理
 - 🔧 丰富的管理员功能
+- 🌐 **双向 WebSocket 连接模式**：支持正向和反向连接
 
 ## 📖 使用说明
 
@@ -55,6 +56,43 @@
    ```
 
 ### 配置说明
+
+#### WebSocket 连接模式
+
+本适配器支持两种 WebSocket 连接模式：
+
+**1. 反向连接模式（默认）**
+```toml
+[napcat_server]
+mode = "reverse"  # 反向连接模式
+host = "0.0.0.0"
+port = 8095
+```
+- 适配器作为 WebSocket 服务器
+- Napcat 客户端主动连接到适配器
+- 默认监听 `ws://0.0.0.0:8095`
+
+**2. 正向连接模式（新增）**
+```toml
+[napcat_server]
+mode = "forward"  # 正向连接模式
+url = "ws://localhost:3001"  # Napcat WebSocket 服务器地址
+access_token = "your_token_here"  # 可选：访问令牌
+```
+- 适配器作为 WebSocket 客户端
+- 适配器主动连接到 Napcat 的 WebSocket 服务器
+- 支持自动重连机制
+- 支持访问令牌身份验证
+
+#### 配置参数说明
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `mode` | string | 是 | 连接模式：`"reverse"` 或 `"forward"` |
+| `host` | string | 反向模式必填 | 监听主机地址（仅反向模式） |
+| `port` | int | 反向模式必填 | 监听端口（仅反向模式） |
+| `url` | string | 正向模式必填 | Napcat WebSocket 服务器地址（仅正向模式） |
+| `access_token` | string | 否 | WebSocket 连接的访问令牌，用于身份验证 |
 
 # 使用说明
 请参考[官方文档](https://docs.mai-mai.org/manual/adapters/napcat.html)
@@ -111,6 +149,8 @@ sequenceDiagram
 - [x] 自动心跳测试连接
 - [x] WebSocket 连接维护
 - [x] 消息队列管理
+- [x] **双向连接模式** - 支持正向和反向 WebSocket 连接
+- [x] **自动重连机制** - 正向连接模式的自动重连
 
 #### 消息接收解析
 - [x] **文本消息** - 完整支持纯文本消息
