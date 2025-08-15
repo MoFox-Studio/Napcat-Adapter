@@ -126,9 +126,11 @@ class SendHandler:
                 case CommandType.AI_VOICE_SEND.name:
                     command, args_dict = self.handle_ai_voice_send_command(seg_data.get("args"), group_info)
                 case CommandType.SET_EMOJI_LIKE.name:
-                    command, args_dict = self.handle_set_emoji_like_command(seg_data.get("args"), group_info)
+                    command, args_dict = self.handle_set_emoji_like_command(seg_data.get("args"))
                 case CommandType.SEND_AT_MESSAGE.name:
                     command, args_dict = self.handle_at_message_command(seg_data.get("args"), group_info)
+                case CommandType.SEND_LIKE.name:
+                    command, args_dict = self.handle_send_like_command(seg_data.get("args"))
                 case _:
                     logger.error(f"未知命令: {command_name}")
                     return
@@ -439,29 +441,52 @@ class SendHandler:
             },
         )
 
-    def set_emoji_like_command(self, args: Dict[str, Any], group_info: GroupInfo) -> Tuple[str, Dict[str, Any]]:
+    def handle_set_emoji_like_command(self, args: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
         """处理设置表情回应命令
 
         Args:
             args (Dict[str, Any]): 参数字典
-            group_info (GroupInfo): 群聊信息（对应目标群聊）
+
 
         Returns:
             Tuple[CommandType, Dict[str, Any]]
         """
         try:
             message_id = int(args["message_id"])
-            if message_id <= 0:
-                raise ValueError("消息ID无效")
-        except KeyError:
-            raise ValueError("缺少必需参数: message_id") from None
-        except (ValueError, TypeError) as e:
-            raise ValueError(f"消息ID无效: {args['message_id']} - {str(e)}") from None
+            emoji_id = int(args["emoji_id"])
+        except:
+            raise ValueError("缺少必需参数: message_id 或 emoji_id")
 
         return (
             CommandType.DELETE_MSG.value,
             {
                 "message_id": message_id,
+                "emoji_id": emoji_id,
+                "set": True
+            },
+        )
+
+    def handle_send_like_command(self, args: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
+        """
+        处理发送点赞命令的逻辑。
+
+        Args:
+            args (Dict[str, Any]): 参数字典
+
+        Returns:
+            Tuple[CommandType, Dict[str, Any]]
+        """
+        try:
+            user_id: int = int(args["qq_id"])
+            times: int = int(args["times"])
+        except (KeyError, ValueError):
+            raise ValueError("缺少必需参数: qq_id 或 times")
+
+        return (
+            CommandType.SEND_LIKE.value,
+            {
+                "user_id": user_id,
+                "times": times
             },
         )
 
