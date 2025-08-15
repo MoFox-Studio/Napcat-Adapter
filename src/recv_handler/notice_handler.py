@@ -6,6 +6,7 @@ from typing import Tuple, Optional
 
 from src.logger import logger
 from src.config import global_config
+from src.config.features_config import features_manager
 from src.database import BanUser, db_manager, is_identical
 from . import NoticeType, ACCEPT_FORMAT
 from .message_sending import message_send_instance
@@ -106,7 +107,7 @@ class NoticeHandler:
                 sub_type = raw_message.get("sub_type")
                 match sub_type:
                     case NoticeType.Notify.poke:
-                        if global_config.chat.enable_poke and await message_handler.check_allow_to_chat(
+                        if features_manager.is_poke_enabled() and await message_handler.check_allow_to_chat(
                             user_id, group_id, False, False
                         ):
                             logger.info("处理戳一戳消息")
@@ -195,8 +196,8 @@ class NoticeHandler:
         # 防抖检查：如果是针对机器人的戳一戳，检查防抖时间
         if self_id == target_id:
             current_time = time.time()
-            debounce_seconds = global_config.chat.poke_debounce_seconds
-            
+            debounce_seconds = features_manager.get_config().poke_debounce_seconds
+
             if self.last_poke_time > 0:
                 time_diff = current_time - self.last_poke_time
                 if time_diff < debounce_seconds:
@@ -232,7 +233,7 @@ class NoticeHandler:
 
         else:
             # 如果配置为忽略不是针对自己的戳一戳，则直接返回None
-            if global_config.chat.ignore_non_self_poke:
+            if features_manager.is_non_self_poke_ignored():
                 logger.info("忽略不是针对自己的戳一戳消息")
                 return None, None
                 

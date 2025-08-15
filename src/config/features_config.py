@@ -249,6 +249,16 @@ class FeaturesManager:
         """检查是否禁止QQ官方机器人"""
         config = self.get_config()
         return config.ban_qq_bot
+    
+    def is_poke_enabled(self) -> bool:
+        """检查戳一戳功能是否启用"""
+        config = self.get_config()
+        return config.enable_poke
+    
+    def is_non_self_poke_ignored(self) -> bool:
+        """检查是否忽略非自己戳一戳"""
+        config = self.get_config()
+        return config.ignore_non_self_poke
 
 
 # 全局功能管理器实例
