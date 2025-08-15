@@ -454,15 +454,16 @@ class SendHandler:
         try:
             message_id = int(args["message_id"])
             emoji_id = int(args["emoji_id"])
+            set_like = str(args["set"])
         except:
             raise ValueError("缺少必需参数: message_id 或 emoji_id")
 
         return (
-            CommandType.DELETE_MSG.value,
+            CommandType.SET_EMOJI_LIKE.value,
             {
                 "message_id": message_id,
                 "emoji_id": emoji_id,
-                "set": True
+                "set": set_like
             },
         )
 
