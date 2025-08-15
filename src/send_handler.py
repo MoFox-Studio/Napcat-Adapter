@@ -125,6 +125,8 @@ class SendHandler:
                     command, args_dict = self.delete_msg_command(seg_data.get("args"))
                 case CommandType.AI_VOICE_SEND.name:
                     command, args_dict = self.handle_ai_voice_send_command(seg_data.get("args"), group_info)
+                case CommandType.SET_EMOJI_LIKE.name:
+                    command, args_dict = self.handle_set_emoji_like_command(seg_data.get("args"), group_info)
                 case CommandType.SEND_AT_MESSAGE.name:
                     command, args_dict = self.handle_at_message_command(seg_data.get("args"), group_info)
                 case _:
@@ -437,11 +439,12 @@ class SendHandler:
             },
         )
 
-    def delete_msg_command(self, args: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
-        """处理撤回消息命令
+    def set_emoji_like_command(self, args: Dict[str, Any], group_info: GroupInfo) -> Tuple[str, Dict[str, Any]]:
+        """处理设置表情回应命令
 
         Args:
             args (Dict[str, Any]): 参数字典
+            group_info (GroupInfo): 群聊信息（对应目标群聊）
 
         Returns:
             Tuple[CommandType, Dict[str, Any]]

@@ -9,6 +9,8 @@ from src.recv_handler.notice_handler import notice_handler
 from src.recv_handler.message_sending import message_send_instance
 from src.send_handler import send_handler
 from src.config import global_config
+from src.config.features_config import features_manager
+from src.config.migrate_features import auto_migrate_features
 from src.mmc_com_layer import mmc_start_com, mmc_stop_com, router
 from src.response_pool import put_response, check_timeout_response
 from src.websocket_manager import websocket_manager
@@ -47,6 +49,16 @@ async def message_process():
 
 
 async def main():
+    # 执行功能配置迁移（如果需要）
+    logger.info("检查功能配置迁移...")
+    auto_migrate_features()
+    
+    # 初始化功能管理器
+    logger.info("正在初始化功能管理器...")
+    features_manager.load_config()
+    await features_manager.start_file_watcher(check_interval=2.0)
+    logger.info("功能管理器初始化完成")
+    
     message_send_instance.maibot_router = router
     _ = await asyncio.gather(napcat_server(), mmc_start_com(), message_process(), check_timeout_response())
 
@@ -66,6 +78,9 @@ async def napcat_server():
 async def graceful_shutdown():
     try:
         logger.info("正在关闭adapter...")
+        
+        # 停止功能管理器文件监控
+        await features_manager.stop_file_watcher()
         
         # 首先关闭 WebSocket 连接
         await websocket_manager.stop_connection()

@@ -12,7 +12,6 @@ from rich.traceback import install
 
 from src.config.config_base import ConfigBase
 from src.config.official_configs import (
-    ChatConfig,
     DebugConfig,
     MaiBotServerConfig,
     NapcatServerConfig,
@@ -23,24 +22,34 @@ from src.config.official_configs import (
 install(extra_lines=3)
 
 TEMPLATE_DIR = "template"
+CONFIG_DIR = "config"
+OLD_CONFIG_DIR = "config/old"
+
+
+def ensure_config_directories():
+    """确保配置目录存在"""
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    os.makedirs(OLD_CONFIG_DIR, exist_ok=True)
 
 
 def update_config():
+    """更新配置文件，统一使用 config/old 目录进行备份"""
+    # 确保目录存在
+    ensure_config_directories()
+    
     # 定义文件路径
     template_path = f"{TEMPLATE_DIR}/template_config.toml"
-    old_config_path = "config.toml"
-    new_config_path = "config.toml"
+    config_path = f"{CONFIG_DIR}/config.toml"
 
     # 检查配置文件是否存在
-    if not os.path.exists(old_config_path):
-        logger.info("配置文件不存在，从模板创建新配置")
-        shutil.copy2(template_path, old_config_path)  # 复制模板文件
-        logger.info(f"已创建新配置文件，请填写后重新运行: {old_config_path}")
-        # 如果是新创建的配置文件,直接返回
-        quit()
+    if not os.path.exists(config_path):
+        logger.info("主配置文件不存在，从模板创建新配置")
+        shutil.copy2(template_path, config_path)
+        logger.info(f"已创建新配置文件: {config_path}")
+        logger.info("程序将退出，请检查配置文件后重启")
 
-    # 读取旧配置文件和模板文件
-    with open(old_config_path, "r", encoding="utf-8") as f:
+    # 读取配置文件和模板文件
+    with open(config_path, "r", encoding="utf-8") as f:
         old_config = tomlkit.load(f)
     with open(template_path, "r", encoding="utf-8") as f:
         new_config = tomlkit.load(f)
@@ -57,26 +66,20 @@ def update_config():
     else:
         logger.info("已有配置文件未检测到版本号，可能是旧版本。将进行更新")
 
-    # 创建备份文件夹
-    backup_dir = "config_backup"
-    os.makedirs(backup_dir, exist_ok=True)
-
-    # 备份文件名
+    # 创建备份文件
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    old_backup_path = os.path.join(backup_dir, f"config.toml.bak.{timestamp}")
+    backup_path = os.path.join(OLD_CONFIG_DIR, f"config.toml.bak.{timestamp}")
 
     # 备份旧配置文件
-    shutil.copy2(old_config_path, old_backup_path)
-    logger.info(f"已备份旧配置文件到: {old_backup_path}")
+    shutil.copy2(config_path, backup_path)
+    logger.info(f"已备份旧配置文件到: {backup_path}")
 
     # 复制模板文件到配置目录
-    shutil.copy2(template_path, new_config_path)
-    logger.info(f"已创建新配置文件: {new_config_path}")
+    shutil.copy2(template_path, config_path)
+    logger.info(f"已创建新配置文件: {config_path}")
 
     def update_dict(target: TOMLDocument | dict, source: TOMLDocument | dict):
-        """
-        将source字典的值更新到target字典中（如果target中存在相同的键）
-        """
+        """将source字典的值更新到target字典中（如果target中存在相同的键）"""
         for key, value in source.items():
             # 跳过version字段的更新
             if key == "version":
@@ -102,10 +105,9 @@ def update_config():
     update_dict(new_config, old_config)
 
     # 保存更新后的配置（保留注释和格式）
-    with open(new_config_path, "w", encoding="utf-8") as f:
+    with open(config_path, "w", encoding="utf-8") as f:
         f.write(tomlkit.dumps(new_config))
     logger.info("配置文件更新完成，建议检查新配置文件中的内容，以免丢失重要信息")
-    quit()
 
 
 @dataclass
@@ -115,7 +117,6 @@ class Config(ConfigBase):
     nickname: NicknameConfig
     napcat_server: NapcatServerConfig
     maibot_server: MaiBotServerConfig
-    chat: ChatConfig
     voice: VoiceConfig
     debug: DebugConfig
 
@@ -142,5 +143,5 @@ def load_config(config_path: str) -> Config:
 update_config()
 
 logger.info("正在品鉴配置文件...")
-global_config = load_config(config_path="config.toml")
+global_config = load_config(config_path=f"{CONFIG_DIR}/config.toml")
 logger.info("非常的新鲜，非常的美味！")

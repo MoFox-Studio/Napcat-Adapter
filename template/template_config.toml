@@ -17,29 +17,9 @@ heartbeat_interval = 30 # 心跳间隔时间（按秒计）
 host = "localhost" # 麦麦在.env文件中设置的主机地址，即HOST字段
 port = 8000        # 麦麦在.env文件中设置的端口，即PORT字段
 
-[chat] # 黑白名单功能
-group_list_type = "whitelist" # 群组名单类型，可选为：whitelist, blacklist
-group_list = []               # 群组名单
-# 当group_list_type为whitelist时，只有群组名单中的群组可以聊天
-# 当group_list_type为blacklist时，群组名单中的任何群组无法聊天
-private_list_type = "whitelist" # 私聊名单类型，可选为：whitelist, blacklist
-private_list = []               # 私聊名单
-# 当private_list_type为whitelist时，只有私聊名单中的用户可以聊天
-# 当private_list_type为blacklist时，私聊名单中的任何用户无法聊天
-ban_user_id = []   # 全局禁止名单（全局禁止名单中的用户无法进行任何聊天）
-ban_qq_bot = false # 是否屏蔽QQ官方机器人
-enable_poke = true # 是否启用戳一戳功能
-ignore_non_self_poke = false # 是否无视不是针对自己的戳一戳
-poke_debounce_seconds = 3 # 戳一戳防抖时间（秒），在指定时间内第二次针对机器人的戳一戳将被忽略
-
 [voice] # 发送语音设置
 use_tts = false # 是否使用tts语音（请确保你配置了tts并有对应的adapter）
 
-[video] # 视频处理设置
-enable_video_analysis = true # 是否启用视频识别功能
-max_video_size_mb = 100      # 视频文件最大大小限制（MB）
-download_timeout = 60        # 视频下载超时时间（秒）
-supported_formats = ["mp4", "avi", "mov", "mkv", "flv", "wmv", "webm"] # 支持的视频格式
-
 [debug]
 level = "INFO" # 日志等级（DEBUG, INFO, WARNING, ERROR, CRITICAL）
+

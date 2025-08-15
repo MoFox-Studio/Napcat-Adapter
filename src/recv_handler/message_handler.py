@@ -1,5 +1,6 @@
 from src.logger import logger
 from src.config import global_config
+from src.config.features_config import features_manager
 from src.utils import (
     get_group_info,
     get_member_info,
@@ -72,25 +73,24 @@ class MessageHandler:
         """
         logger.debug(f"群聊id: {group_id}, 用户id: {user_id}")
         logger.debug("开始检查聊天白名单/黑名单")
+        
+        # 使用新的权限管理器检查权限
         if group_id:
-            if global_config.chat.group_list_type == "whitelist" and group_id not in global_config.chat.group_list:
-                logger.warning("群聊不在聊天白名单中，消息被丢弃")
-                return False
-            elif global_config.chat.group_list_type == "blacklist" and group_id in global_config.chat.group_list:
-                logger.warning("群聊在聊天黑名单中，消息被丢弃")
+            if not features_manager.is_group_allowed(group_id):
+                logger.warning("群聊不在聊天权限范围内，消息被丢弃")
                 return False
         else:
-            if global_config.chat.private_list_type == "whitelist" and user_id not in global_config.chat.private_list:
-                logger.warning("私聊不在聊天白名单中，消息被丢弃")
+            if not features_manager.is_private_allowed(user_id):
+                logger.warning("私聊不在聊天权限范围内，消息被丢弃")
                 return False
-            elif global_config.chat.private_list_type == "blacklist" and user_id in global_config.chat.private_list:
-                logger.warning("私聊在聊天黑名单中，消息被丢弃")
-                return False
-        if user_id in global_config.chat.ban_user_id and not ignore_global_list:
+        
+        # 检查全局禁止名单
+        if not ignore_global_list and features_manager.is_user_banned(user_id):
             logger.warning("用户在全局黑名单中，消息被丢弃")
             return False
 
-        if global_config.chat.ban_qq_bot and group_id and not ignore_bot:
+        # 检查QQ官方机器人
+        if features_manager.is_qq_bot_banned() and group_id and not ignore_bot:
             logger.debug("开始判断是否为机器人")
             member_info = await get_member_info(self.get_server_connection(), group_id, user_id)
             if member_info:

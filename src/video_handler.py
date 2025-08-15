@@ -5,7 +5,6 @@
 用于从QQ消息中下载视频并转发给Bot进行分析
 """
 
-import os
 import aiohttp
 import asyncio
 from pathlib import Path
