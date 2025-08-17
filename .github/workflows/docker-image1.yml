@@ -1,8 +1,8 @@
-name: Docker 镜像构建与推送
+name: Docker Image CI
 
 on:
   push:
-    branches: [ "master", "develop" ] # 触发分支
+    branches: [ "master", "develop" ]
   workflow_dispatch: # 允许手动触发工作流
 
 jobs:
@@ -11,44 +11,44 @@ jobs:
 
     runs-on: ubuntu-latest
     env:
-      DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USERNAME }} # Docker Hub 用户名
-      DATE_TAG: $(date -u +'%Y-%m-%dT%H-%M-%S') # 用于生成时间戳标签
+      DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+      DATE_TAG: $(date -u +'%Y-%m-%dT%H-%M-%S')
 
     steps:
-    - name: 检出代码
+    - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: 设置 Docker Buildx
+    - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: 登录 Docker Hub
+    - name: Login to Docker Hub
       uses: docker/login-action@v3
       with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }} # Docker Hub 用户名
-        password: ${{ secrets.DOCKERHUB_TOKEN }} # Docker Hub 密码
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: 克隆 maim_message 仓库
+    - name: Clone maim_message
       run: git clone https://github.com/MaiM-with-u/maim_message maim_message
 
-    - name: 确定镜像标签
+    - name: Determine Image Tags
       id: tags
       run: |
         if [ "${{ github.ref_name }}" == "master" ]; then
-          echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:latest,${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:master-$(date -u +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+          echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:latest,${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:later-$(date -u +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
         elif [ "${{ github.ref_name }}" == "develop" ]; then
-          echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:dev,${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:develop-$(date -u +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+          echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:dev,${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:dev-$(date -u +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
         fi
 
-    - name: 构建并推送 Docker 镜像
+    - name: Build and Push Docker Image
       uses: docker/build-push-action@v5
       with:
-        context: . # 构建上下文
-        file: ./Dockerfile # Dockerfile 路径
-        platforms: linux/amd64,linux/arm64 # 构建平台
-        tags: ${{ steps.tags.outputs.tags }} # 镜像标签
-        push: true # 推送镜像
-        cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:buildcache-${{ github.ref_name }} # 缓存来源
-        cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:buildcache-${{ github.ref_name }},mode=max # 缓存目标
+        context: .
+        file: ./Dockerfile
+        platforms: linux/amd64,linux/arm64
+        tags: ${{ steps.tags.outputs.tags }}
+        push: true
+        cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:buildcache-${{ github.ref_name }}
+        cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:buildcache-${{ github.ref_name }},mode=max
         labels: |
-          org.opencontainers.image.created=${{ steps.tags.outputs.date_tag }} # 镜像创建时间
-          org.opencontainers.image.revision=${{ github.sha }} # 镜像修订版本
+          org.opencontainers.image.created=${{ steps.tags.outputs.date_tag }}
+          org.opencontainers.image.revision=${{ github.sha }}
