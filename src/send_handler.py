@@ -230,12 +230,12 @@ class SendHandler:
             if not seg_data.data:
                 return []
             for seg in seg_data.data:
-                payload = self.process_message_by_type(seg, payload, user_info)
+                payload = await self.process_message_by_type(seg, payload, user_info)
         else:
-            payload = self.process_message_by_type(seg_data, payload, user_info)
+            payload = await self.process_message_by_type(seg_data, payload, user_info)
         return payload
 
-    def process_message_by_type(
+    async def process_message_by_type(
         self, seg: Seg, payload: list, user_info: UserInfo
     ) -> list:
         # sourcery skip: reintroduce-else, swap-if-else-branches, use-named-expression
@@ -246,7 +246,7 @@ class SendHandler:
                 return payload
             new_payload = self.build_payload(
                 payload,
-                self.handle_reply_message(
+                await self.handle_reply_message(
                     target_id if isinstance(target_id, str) else "", user_info
                 ),
                 True,
@@ -309,7 +309,7 @@ class SendHandler:
                 payload.append(addon)
             return payload
 
-    def handle_reply_message(self, id: str, user_info: UserInfo) -> dict | list:
+    async def handle_reply_message(self, id: str, user_info: UserInfo) -> dict | list:
         """处理回复消息"""
         reply_seg = {"type": "reply", "data": {"id": id}}
 
@@ -320,12 +320,32 @@ class SendHandler:
         if not ft_config.enable_reply_at:
             return reply_seg
 
-        # 根据概率决定是否艾特用户
-        if random.random() < ft_config.reply_at_rate:
-            at_seg = {"type": "at", "data": {"qq": str(user_info.user_id)}}
-            # 在艾特后面添加一个空格
-            text_seg = {"type": "text", "data": {"text": " "}}
-            return [reply_seg, at_seg, text_seg]
+        try:
+            # 尝试通过 message_id 获取消息详情
+            msg_info_response = await self.send_message_to_napcat("get_msg", {"message_id": int(id)})
+            
+            replied_user_id = None
+            if msg_info_response and msg_info_response.get("status") == "ok":
+                sender_info = msg_info_response.get("data", {}).get("sender")
+                if sender_info:
+                    replied_user_id = sender_info.get("user_id")
+            
+            # 如果没有获取到被回复者的ID，则直接返回，不进行@
+            if not replied_user_id:
+                logger.warning(f"无法获取消息 {id} 的发送者信息，跳过 @")
+                return reply_seg
+
+            # 根据概率决定是否艾特用户
+            if random.random() < ft_config.reply_at_rate:
+                at_seg = {"type": "at", "data": {"qq": str(replied_user_id)}}
+                # 在艾特后面添加一个空格
+                text_seg = {"type": "text", "data": {"text": " "}}
+                return [reply_seg, at_seg, text_seg]
+                
+        except Exception as e:
+            logger.error(f"处理引用回复并尝试@时出错: {e}")
+            # 出现异常时，只发送普通的回复，避免程序崩溃
+            return reply_seg
 
         return reply_seg
 
