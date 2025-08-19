@@ -38,6 +38,12 @@ class FeaturesConfig(ConfigBase):
     
     poke_debounce_seconds: int = 3
     """戳一戳防抖时间（秒），在指定时间内第二次针对机器人的戳一戳将被忽略"""
+
+    enable_reply_at: bool = True
+    """是否启用引用回复时艾特用户的功能"""
+
+    reply_at_rate: float = 0.5
+    """引用回复时艾特用户的几率 (0.0 ~ 1.0)"""
     
     enable_video_analysis: bool = True
     """是否启用视频识别功能"""
@@ -159,6 +165,8 @@ class FeaturesManager:
             "enable_poke": True,
             "ignore_non_self_poke": False,
             "poke_debounce_seconds": 3,
+            "enable_reply_at": True,
+            "reply_at_rate": 0.5,
             "enable_video_analysis": True,
             "max_video_size_mb": 100,
             "download_timeout": 60,
@@ -215,6 +223,8 @@ class FeaturesManager:
             config1.enable_poke == config2.enable_poke and
             config1.ignore_non_self_poke == config2.ignore_non_self_poke and
             config1.poke_debounce_seconds == config2.poke_debounce_seconds and
+            config1.enable_reply_at == config2.enable_reply_at and
+            config1.reply_at_rate == config2.reply_at_rate and
             config1.enable_video_analysis == config2.enable_video_analysis and
             config1.max_video_size_mb == config2.max_video_size_mb and
             config1.download_timeout == config2.download_timeout and
@@ -265,7 +275,7 @@ class FeaturesManager:
     def get_config(self) -> FeaturesConfig:
         """获取当前功能配置"""
         if self.config is None:
-            self.load_config()
+            return self.load_config()
         return self.config
     
     def is_group_allowed(self, group_id: int) -> bool:

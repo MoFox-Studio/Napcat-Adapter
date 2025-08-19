@@ -14,12 +14,17 @@ class CommandType(Enum):
     DELETE_MSG = "delete_msg"  # 撤回消息
     AI_VOICE_SEND = "send_group_ai_record"  # 发送群AI语音
     SET_EMOJI_LIKE = "set_emoji_like"  # 设置表情回应
+    SEND_AT_MESSAGE = "send_at_message"  # 艾特用户并发送消息
+    SEND_LIKE = "send_like"  # 点赞
 
     def __str__(self) -> str:
         return self.value
 
 
-pyproject_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "pyproject.toml")
+pyproject_path = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), "pyproject.toml"
+)
 toml_data = tomlkit.parse(open(pyproject_path, "r", encoding="utf-8").read())
-version = toml_data["project"]["version"]
+project_data = toml_data.get("project", {})
+version = project_data.get("version", "unknown")
 logger.info(f"版本\n\nMaiBot-Napcat-Adapter 版本: {version}\n喜欢的话点个star喵~\n")

@@ -1,5 +1,6 @@
 import json
 import time
+import random
 import websockets as Server
 import uuid
 import asyncio
@@ -10,7 +11,7 @@ from maim_message import (
     BaseMessageInfo,
     MessageBase,
 )
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Optional
 
 from . import CommandType
 from .config import global_config
@@ -19,17 +20,18 @@ from .logger import logger
 from .utils import get_image_format, convert_image_to_gif
 from .recv_handler.message_sending import message_send_instance
 from .websocket_manager import websocket_manager
+from .config.features_config import features_manager
 
 
 class SendHandler:
     def __init__(self):
-        self.server_connection: Server.ServerConnection = None
+        self.server_connection: Optional[Server.ServerConnection] = None
 
     async def set_server_connection(self, server_connection: Server.ServerConnection) -> None:
         """设置Napcat连接"""
         self.server_connection = server_connection
 
-    def get_server_connection(self) -> Server.ServerConnection:
+    def get_server_connection(self) -> Optional[Server.ServerConnection]:
         """获取当前的服务器连接"""
         # 优先使用直接设置的连接，否则从 websocket_manager 获取
         if self.server_connection:
@@ -57,14 +59,17 @@ class SendHandler:
         logger.info("处理普通信息中")
         message_info: BaseMessageInfo = raw_message_base.message_info
         message_segment: Seg = raw_message_base.message_segment
-        group_info: GroupInfo = message_info.group_info
-        user_info: UserInfo = message_info.user_info
-        target_id: int = None
-        action: str = None
-        id_name: str = None
+        group_info: Optional[GroupInfo] = message_info.group_info
+        user_info: Optional[UserInfo] = message_info.user_info
+        target_id: Optional[int] = None
+        action: Optional[str] = None
+        id_name: Optional[str] = None
         processed_message: list = []
         try:
-            processed_message = await self.handle_seg_recursive(message_segment)
+            if user_info:
+                processed_message = await self.handle_seg_recursive(
+                    message_segment, user_info
+                )
         except Exception as e:
             logger.error(f"处理消息时发生错误: {e}")
             return
@@ -75,12 +80,12 @@ class SendHandler:
 
         if group_info and user_info:
             logger.debug("发送群聊消息")
-            target_id = group_info.group_id
+            target_id = int(group_info.group_id) if group_info.group_id else None
             action = "send_group_msg"
             id_name = "group_id"
         elif user_info:
             logger.debug("发送私聊消息")
-            target_id = user_info.user_id
+            target_id = int(user_info.user_id) if user_info.user_id else None
             action = "send_private_msg"
             id_name = "user_id"
         else:
@@ -108,29 +113,43 @@ class SendHandler:
         logger.info("处理命令中")
         message_info: BaseMessageInfo = raw_message_base.message_info
         message_segment: Seg = raw_message_base.message_segment
-        group_info: GroupInfo = message_info.group_info
-        seg_data: Dict[str, Any] = message_segment.data
-        command_name: str = seg_data.get("name")
+        group_info: Optional[GroupInfo] = message_info.group_info
+        seg_data: Dict[str, Any] = (
+            message_segment.data
+            if isinstance(message_segment.data, dict)
+            else {}
+        )
+        command_name: Optional[str] = seg_data.get("name")
         try:
+            args = seg_data.get("args", {})
+            if not isinstance(args, dict):
+                args = {}
+
             match command_name:
                 case CommandType.GROUP_BAN.name:
-                    command, args_dict = self.handle_ban_command(seg_data.get("args"), group_info)
+                    command, args_dict = self.handle_ban_command(args, group_info)
                 case CommandType.GROUP_WHOLE_BAN.name:
-                    command, args_dict = self.handle_whole_ban_command(seg_data.get("args"), group_info)
+                    command, args_dict = self.handle_whole_ban_command(
+                        args, group_info
+                    )
                 case CommandType.GROUP_KICK.name:
-                    command, args_dict = self.handle_kick_command(seg_data.get("args"), group_info)
+                    command, args_dict = self.handle_kick_command(args, group_info)
                 case CommandType.SEND_POKE.name:
-                    command, args_dict = self.handle_poke_command(seg_data.get("args"), group_info)
+                    command, args_dict = self.handle_poke_command(args, group_info)
                 case CommandType.DELETE_MSG.name:
-                    command, args_dict = self.delete_msg_command(seg_data.get("args"))
+                    command, args_dict = self.delete_msg_command(args)
                 case CommandType.AI_VOICE_SEND.name:
-                    command, args_dict = self.handle_ai_voice_send_command(seg_data.get("args"), group_info)
+                    command, args_dict = self.handle_ai_voice_send_command(
+                        args, group_info
+                    )
                 case CommandType.SET_EMOJI_LIKE.name:
-                    command, args_dict = self.handle_set_emoji_like_command(seg_data.get("args"))
+                    command, args_dict = self.handle_set_emoji_like_command(args)
                 case CommandType.SEND_AT_MESSAGE.name:
-                    command, args_dict = self.handle_at_message_command(seg_data.get("args"), group_info)
+                    command, args_dict = self.handle_at_message_command(
+                        args, group_info
+                    )
                 case CommandType.SEND_LIKE.name:
-                    command, args_dict = self.handle_send_like_command(seg_data.get("args"))
+                    command, args_dict = self.handle_send_like_command(args)
                 case _:
                     logger.error(f"未知命令: {command_name}")
                     return
@@ -155,7 +174,11 @@ class SendHandler:
         logger.info("处理适配器命令中")
         message_info: BaseMessageInfo = raw_message_base.message_info
         message_segment: Seg = raw_message_base.message_segment
-        seg_data: Dict[str, Any] = message_segment.data
+        seg_data: Dict[str, Any] = (
+            message_segment.data
+            if isinstance(message_segment.data, dict)
+            else {}
+        )
         
         try:
             action = seg_data.get("action")
@@ -200,31 +223,43 @@ class SendHandler:
         else:
             return 1
 
-    async def handle_seg_recursive(self, seg_data: Seg) -> list:
+    async def handle_seg_recursive(self, seg_data: Seg, user_info: UserInfo) -> list:
         payload: list = []
         if seg_data.type == "seglist":
             # level = self.get_level(seg_data)  # 给以后可能的多层嵌套做准备，此处不使用
             if not seg_data.data:
                 return []
             for seg in seg_data.data:
-                payload = self.process_message_by_type(seg, payload)
+                payload = await self.process_message_by_type(seg, payload, user_info)
         else:
-            payload = self.process_message_by_type(seg_data, payload)
+            payload = await self.process_message_by_type(seg_data, payload, user_info)
         return payload
 
-    def process_message_by_type(self, seg: Seg, payload: list) -> list:
+    async def process_message_by_type(
+        self, seg: Seg, payload: list, user_info: UserInfo
+    ) -> list:
         # sourcery skip: reintroduce-else, swap-if-else-branches, use-named-expression
         new_payload = payload
         if seg.type == "reply":
             target_id = seg.data
             if target_id == "notice":
                 return payload
-            new_payload = self.build_payload(payload, self.handle_reply_message(target_id), True)
+            new_payload = self.build_payload(
+                payload,
+                await self.handle_reply_message(
+                    target_id if isinstance(target_id, str) else "", user_info
+                ),
+                True,
+            )
         elif seg.type == "text":
             text = seg.data
             if not text:
                 return payload
-            new_payload = self.build_payload(payload, self.handle_text_message(text), False)
+            new_payload = self.build_payload(
+                payload,
+                self.handle_text_message(text if isinstance(text, str) else ""),
+                False,
+            )
         elif seg.type == "face":
             logger.warning("MaiBot 发送了qq原生表情，暂时不支持")
         elif seg.type == "image":
@@ -250,12 +285,17 @@ class SendHandler:
             new_payload = self.build_payload(payload, self.handle_file_message(file_path), False)
         return new_payload
 
-    def build_payload(self, payload: list, addon: dict, is_reply: bool = False) -> list:
+    def build_payload(
+        self, payload: list, addon: dict | list, is_reply: bool = False
+    ) -> list:
         # sourcery skip: for-append-to-extend, merge-list-append, simplify-generator
         """构建发送的消息体"""
         if is_reply:
             temp_list = []
-            temp_list.append(addon)
+            if isinstance(addon, list):
+                temp_list.extend(addon)
+            else:
+                temp_list.append(addon)
             for i in payload:
                 if i.get("type") == "reply":
                     logger.debug("检测到多个回复，使用最新的回复")
@@ -263,12 +303,51 @@ class SendHandler:
                 temp_list.append(i)
             return temp_list
         else:
-            payload.append(addon)
+            if isinstance(addon, list):
+                payload.extend(addon)
+            else:
+                payload.append(addon)
             return payload
 
-    def handle_reply_message(self, id: str) -> dict:
+    async def handle_reply_message(self, id: str, user_info: UserInfo) -> dict | list:
         """处理回复消息"""
-        return {"type": "reply", "data": {"id": id}}
+        reply_seg = {"type": "reply", "data": {"id": id}}
+
+        # 获取功能配置
+        ft_config = features_manager.get_config()
+
+        # 检查是否启用引用艾特功能
+        if not ft_config.enable_reply_at:
+            return reply_seg
+
+        try:
+            # 尝试通过 message_id 获取消息详情
+            msg_info_response = await self.send_message_to_napcat("get_msg", {"message_id": int(id)})
+            
+            replied_user_id = None
+            if msg_info_response and msg_info_response.get("status") == "ok":
+                sender_info = msg_info_response.get("data", {}).get("sender")
+                if sender_info:
+                    replied_user_id = sender_info.get("user_id")
+            
+            # 如果没有获取到被回复者的ID，则直接返回，不进行@
+            if not replied_user_id:
+                logger.warning(f"无法获取消息 {id} 的发送者信息，跳过 @")
+                return reply_seg
+
+            # 根据概率决定是否艾特用户
+            if random.random() < ft_config.reply_at_rate:
+                at_seg = {"type": "at", "data": {"qq": str(replied_user_id)}}
+                # 在艾特后面添加一个空格
+                text_seg = {"type": "text", "data": {"text": " "}}
+                return [reply_seg, at_seg, text_seg]
+                
+        except Exception as e:
+            logger.error(f"处理引用回复并尝试@时出错: {e}")
+            # 出现异常时，只发送普通的回复，避免程序崩溃
+            return reply_seg
+
+        return reply_seg
 
     def handle_text_message(self, message: str) -> dict:
         """处理文本消息"""
@@ -338,7 +417,13 @@ class SendHandler:
             "data": {"file": f"file://{file_path}"},
         }
 
-    def handle_ban_command(self, args: Dict[str, Any], group_info: GroupInfo) -> Tuple[str, Dict[str, Any]]:
+    def delete_msg_command(self, args: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
+        """处理删除消息命令"""
+        return "delete_msg", {"message_id": args["message_id"]}
+
+    def handle_ban_command(
+        self, args: Dict[str, Any], group_info: GroupInfo
+    ) -> Tuple[str, Dict[str, Any]]:
         """处理封禁命令
 
         Args:
