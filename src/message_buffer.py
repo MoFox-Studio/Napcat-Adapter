@@ -153,8 +153,12 @@ class SimpleMessageBuffer:
             # 检查是否超过最大组件数量
             if len(session.messages) >= config.message_buffer_max_components:
                 logger.info(f"会话 {session_id} 消息数量达到上限，强制合并")
-                await self._force_merge_session(session_id)
-                return False
+                asyncio.create_task(self._force_merge_session(session_id))
+                self.buffer_pool[session_id] = BufferedSession(
+                    session_id=session_id,
+                    original_event=original_event
+                )
+                session = self.buffer_pool[session_id]
             
             # 添加文本消息
             session.messages.append(TextMessage(text=text))
