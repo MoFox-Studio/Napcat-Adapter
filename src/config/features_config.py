@@ -50,6 +50,34 @@ class FeaturesConfig(ConfigBase):
     
     supported_formats: list[str] = field(default_factory=lambda: ["mp4", "avi", "mov", "mkv", "flv", "wmv", "webm"])
     """支持的视频格式"""
+    
+    # 消息缓冲配置
+    enable_message_buffer: bool = True
+    """是否启用消息缓冲合并功能"""
+    
+    message_buffer_enable_group: bool = True
+    """是否启用群消息缓冲合并"""
+    
+    message_buffer_enable_private: bool = True
+    """是否启用私聊消息缓冲合并"""
+    
+    message_buffer_interval: float = 3.0
+    """消息合并间隔时间（秒），在此时间内的连续消息将被合并"""
+    
+    message_buffer_initial_delay: float = 0.5
+    """消息缓冲初始延迟（秒），收到第一条消息后等待此时间开始合并"""
+    
+    message_buffer_max_components: int = 50
+    """单个会话最大缓冲消息组件数量，超过此数量将强制合并"""
+    
+    message_buffer_enable_image_merge: bool = True
+    """是否启用图片消息合并"""
+    
+    message_buffer_enable_at_merge: bool = True
+    """是否启用@消息合并"""
+    
+    message_buffer_block_prefixes: list[str] = field(default_factory=lambda: ["/", "!", "！", ".", "。", "#", "%"])
+    """消息缓冲屏蔽前缀，以这些前缀开头的消息不会被缓冲"""
 
 
 class FeaturesManager:
@@ -134,7 +162,15 @@ class FeaturesManager:
             "enable_video_analysis": True,
             "max_video_size_mb": 100,
             "download_timeout": 60,
-            "supported_formats": ["mp4", "avi", "mov", "mkv", "flv", "wmv", "webm"]
+            "supported_formats": ["mp4", "avi", "mov", "mkv", "flv", "wmv", "webm"],
+            # 消息缓冲配置
+            "enable_message_buffer": True,
+            "message_buffer_enable_group": True,
+            "message_buffer_enable_private": True,
+            "message_buffer_interval": 3.0,
+            "message_buffer_initial_delay": 0.5,
+            "message_buffer_max_components": 50,
+            "message_buffer_block_prefixes": ["/", "!", "！", ".", "。", "#", "%"]
         }
         
         if not create_default_config_dict(default_config, str(self.config_path), "功能配置文件"):
@@ -182,7 +218,15 @@ class FeaturesManager:
             config1.enable_video_analysis == config2.enable_video_analysis and
             config1.max_video_size_mb == config2.max_video_size_mb and
             config1.download_timeout == config2.download_timeout and
-            set(config1.supported_formats) == set(config2.supported_formats)
+            set(config1.supported_formats) == set(config2.supported_formats) and
+            # 消息缓冲配置比较
+            config1.enable_message_buffer == config2.enable_message_buffer and
+            config1.message_buffer_enable_group == config2.message_buffer_enable_group and
+            config1.message_buffer_enable_private == config2.message_buffer_enable_private and
+            config1.message_buffer_interval == config2.message_buffer_interval and
+            config1.message_buffer_initial_delay == config2.message_buffer_initial_delay and
+            config1.message_buffer_max_components == config2.message_buffer_max_components and
+            set(config1.message_buffer_block_prefixes) == set(config2.message_buffer_block_prefixes)
         )
     
     async def start_file_watcher(self, check_interval: float = 1.0):
@@ -259,6 +303,51 @@ class FeaturesManager:
         """检查是否忽略非自己戳一戳"""
         config = self.get_config()
         return config.ignore_non_self_poke
+    
+    def is_message_buffer_enabled(self) -> bool:
+        """检查消息缓冲功能是否启用"""
+        config = self.get_config()
+        return config.enable_message_buffer
+    
+    def is_message_buffer_group_enabled(self) -> bool:
+        """检查群消息缓冲是否启用"""
+        config = self.get_config()
+        return config.message_buffer_enable_group
+    
+    def is_message_buffer_private_enabled(self) -> bool:
+        """检查私聊消息缓冲是否启用"""
+        config = self.get_config()
+        return config.message_buffer_enable_private
+    
+    def get_message_buffer_interval(self) -> float:
+        """获取消息缓冲间隔时间"""
+        config = self.get_config()
+        return config.message_buffer_interval
+    
+    def get_message_buffer_initial_delay(self) -> float:
+        """获取消息缓冲初始延迟"""
+        config = self.get_config()
+        return config.message_buffer_initial_delay
+    
+    def get_message_buffer_max_components(self) -> int:
+        """获取消息缓冲最大组件数量"""
+        config = self.get_config()
+        return config.message_buffer_max_components
+    
+    def is_message_buffer_group_enabled(self) -> bool:
+        """检查是否启用群聊消息缓冲"""
+        config = self.get_config()
+        return config.message_buffer_enable_group
+    
+    def is_message_buffer_private_enabled(self) -> bool:
+        """检查是否启用私聊消息缓冲"""
+        config = self.get_config()
+        return config.message_buffer_enable_private
+    
+    def get_message_buffer_block_prefixes(self) -> list[str]:
+        """获取消息缓冲屏蔽前缀列表"""
+        config = self.get_config()
+        return config.message_buffer_block_prefixes
 
 
 # 全局功能管理器实例

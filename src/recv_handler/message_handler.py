@@ -1,6 +1,7 @@
 from src.logger import logger
 from src.config import global_config
 from src.config.features_config import features_manager
+from src.message_buffer import SimpleMessageBuffer
 from src.utils import (
     get_group_info,
     get_member_info,
@@ -41,6 +42,13 @@ class MessageHandler:
     def __init__(self):
         self.server_connection: Server.ServerConnection = None
         self.bot_id_list: Dict[int, bool] = {}
+        # 初始化简化消息缓冲器，传入回调函数
+        self.message_buffer = SimpleMessageBuffer(merge_callback=self._send_buffered_message)
+
+    async def shutdown(self):
+        """关闭消息处理器，清理资源"""
+        if self.message_buffer:
+            await self.message_buffer.shutdown()
 
     async def set_server_connection(self, server_connection: Server.ServerConnection) -> None:
         """设置Napcat连接"""
@@ -242,6 +250,45 @@ class MessageHandler:
         if not seg_message:
             logger.warning("处理后消息内容为空")
             return None
+
+        # 检查是否需要使用消息缓冲
+        if features_manager.is_message_buffer_enabled():
+            # 检查消息类型是否启用缓冲
+            message_type = raw_message.get("message_type")
+            should_use_buffer = False
+            
+            if message_type == "group" and features_manager.is_message_buffer_group_enabled():
+                should_use_buffer = True
+            elif message_type == "private" and features_manager.is_message_buffer_private_enabled():
+                should_use_buffer = True
+            
+            if should_use_buffer:
+                logger.debug(f"尝试缓冲消息，消息类型: {message_type}, 用户: {user_info.user_id}")
+                logger.debug(f"原始消息段: {raw_message.get('message', [])}")
+                
+                # 尝试添加到缓冲器
+                buffered = await self.message_buffer.add_text_message(
+                    event_data={
+                        "message_type": message_type,
+                        "user_id": user_info.user_id,
+                        "group_id": group_info.group_id if group_info else None,
+                    },
+                    message=raw_message.get("message", []),
+                    original_event={
+                        "message_info": message_info,
+                        "raw_message": raw_message
+                    }
+                )
+                
+                if buffered:
+                    logger.debug(f"✅ 文本消息已成功缓冲: {user_info.user_id}")
+                    return None  # 缓冲成功，不立即发送
+                return await self.handle_real_message(raw_message)
+
+        logger.debug(f"准备发送消息到MaiBot，消息段数量: {len(seg_message)}")
+        for i, seg in enumerate(seg_message):
+            logger.debug(f"消息段 {i}: type={seg.type}, data={str(seg.data)[:100]}...")
+
         submit_seg: Seg = Seg(
             type="seglist",
             data=seg_message,
@@ -763,6 +810,53 @@ class MessageHandler:
             logger.warning("转发消息内容为空或获取失败")
             return None
         return response_data.get("messages")
+
+    async def _send_buffered_message(self, session_id: str, merged_text: str, original_event: Dict[str, Any]):
+        """发送缓冲的合并消息"""
+        try:
+            # 从原始事件数据中提取信息
+            message_info = original_event.get("message_info")
+            raw_message = original_event.get("raw_message")
+            
+            if not message_info or not raw_message:
+                logger.error("缓冲消息缺少必要信息")
+                return
+            
+            # 创建合并后的消息段 - 将合并的文本转换为Seg格式
+            from maim_message import Seg
+            merged_seg = Seg(type="text", data=merged_text)
+            submit_seg = Seg(type="seglist", data=[merged_seg])
+            
+            # 创建新的消息ID
+            import uuid
+            import time
+            new_message_id = f"buffered-{message_info.message_id}-{int(time.time() * 1000)}"
+            
+            # 更新消息信息
+            from maim_message import BaseMessageInfo, MessageBase
+            buffered_message_info = BaseMessageInfo(
+                platform=message_info.platform,
+                message_id=new_message_id,
+                time=time.time(),
+                user_info=message_info.user_info,
+                group_info=message_info.group_info,
+                template_info=message_info.template_info,
+                format_info=message_info.format_info,
+                additional_config=message_info.additional_config,
+            )
+            
+            # 创建MessageBase
+            message_base = MessageBase(
+                message_info=buffered_message_info,
+                message_segment=submit_seg,
+                raw_message=raw_message.get("raw_message", ""),
+            )
+            
+            logger.info(f"发送缓冲合并消息到Maibot处理: {session_id}")
+            await message_send_instance.message_send(message_base)
+            
+        except Exception as e:
+            logger.error(f"发送缓冲消息失败: {e}", exc_info=True)
 
 
 message_handler = MessageHandler()

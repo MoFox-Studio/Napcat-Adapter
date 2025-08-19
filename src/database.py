@@ -99,12 +99,12 @@ class DatabaseManager:
                     )
                     if ban_record := session.exec(statement).first():
                         session.delete(ban_record)
-                        session.commit()
+                        
                         logger.debug(f"删除禁言记录: {ban_record}")
                     else:
                         logger.info(f"未找到禁言记录: {ban_record}")
 
-            session.commit()
+            
             logger.info("禁言记录已更新")
 
     def get_ban_records(self) -> List[BanUser]:
@@ -140,7 +140,7 @@ class DatabaseManager:
                 )
                 session.add(db_record)
                 logger.debug(f"创建新禁言记录: {ban_record}")
-            session.commit()
+            
 
     def delete_ban_record(self, ban_record: BanUser):
         """
@@ -153,7 +153,7 @@ class DatabaseManager:
             statement = select(DB_BanUser).where(DB_BanUser.user_id == user_id, DB_BanUser.group_id == group_id)
             if ban_record := session.exec(statement).first():
                 session.delete(ban_record)
-                session.commit()
+                
                 logger.debug(f"删除禁言记录: {ban_record}")
             else:
                 logger.info(f"未找到禁言记录: user_id: {user_id}, group_id: {group_id}")

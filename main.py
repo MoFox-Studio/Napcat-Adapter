@@ -82,6 +82,9 @@ async def graceful_shutdown():
         # 停止功能管理器文件监控
         await features_manager.stop_file_watcher()
         
+        # 关闭消息处理器（包括消息缓冲器）
+        await message_handler.shutdown()
+        
         # 首先关闭 WebSocket 连接
         await websocket_manager.stop_connection()
         

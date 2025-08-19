@@ -30,3 +30,12 @@ enable_video_analysis = true    # 是否启用视频识别功能
 max_video_size_mb = 100         # 视频文件最大大小限制（MB）
 download_timeout = 60           # 视频下载超时时间（秒）
 supported_formats = ["mp4", "avi", "mov", "mkv", "flv", "wmv", "webm"]  # 支持的视频格式
+
+# 消息缓冲设置
+enable_message_buffer = true                    # 是否启用消息缓冲合并功能
+message_buffer_enable_group = true              # 是否启用群聊消息缓冲合并
+message_buffer_enable_private = true            # 是否启用私聊消息缓冲合并
+message_buffer_interval = 3.0                   # 消息合并间隔时间（秒），在此时间内的连续消息将被合并
+message_buffer_initial_delay = 0.5              # 消息缓冲初始延迟（秒），收到第一条消息后等待此时间开始合并
+message_buffer_max_components = 50              # 单个会话最大缓冲消息组件数量，超过此数量将强制合并
+message_buffer_block_prefixes = ["/", "!", "！", ".", "。", "#", "%"]  # 消息缓冲屏蔽前缀，以这些前缀开头的消息不会被缓冲
