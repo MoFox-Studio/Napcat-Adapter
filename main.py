@@ -103,17 +103,11 @@ async def graceful_shutdown():
 
 
 if __name__ == "__main__":
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
     try:
-        loop.run_until_complete(main())
+        asyncio.run(main())
     except KeyboardInterrupt:
         logger.warning("收到中断信号，正在优雅关闭...")
-        loop.run_until_complete(graceful_shutdown())
+        asyncio.run(graceful_shutdown())
     except Exception as e:
         logger.exception(f"主程序异常: {str(e)}")
         sys.exit(1)
-    finally:
-        if loop and not loop.is_closed():
-            loop.close()
-        sys.exit(0)
