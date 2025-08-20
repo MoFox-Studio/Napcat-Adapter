@@ -76,12 +76,6 @@ class FeaturesConfig(ConfigBase):
     message_buffer_max_components: int = 50
     """单个会话最大缓冲消息组件数量，超过此数量将强制合并"""
     
-    message_buffer_enable_image_merge: bool = True
-    """是否启用图片消息合并"""
-    
-    message_buffer_enable_at_merge: bool = True
-    """是否启用@消息合并"""
-    
     message_buffer_block_prefixes: list[str] = field(default_factory=lambda: ["/", "!", "！", ".", "。", "#", "%"])
     """消息缓冲屏蔽前缀，以这些前缀开头的消息不会被缓冲"""
 
