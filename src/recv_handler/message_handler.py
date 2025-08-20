@@ -828,7 +828,6 @@ class MessageHandler:
             submit_seg = Seg(type="seglist", data=[merged_seg])
             
             # 创建新的消息ID
-            import uuid
             import time
             new_message_id = f"buffered-{message_info.message_id}-{int(time.time() * 1000)}"
             
