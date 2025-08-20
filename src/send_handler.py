@@ -39,9 +39,11 @@ class SendHandler:
         return websocket_manager.get_connection()
 
     async def handle_message(self, raw_message_base_dict: dict) -> None:
+        logger.debug(f"收到原始消息数据: {raw_message_base_dict}")
         raw_message_base: MessageBase = MessageBase.from_dict(raw_message_base_dict)
         message_segment: Seg = raw_message_base.message_segment
         logger.info("接收到来自MaiBot的消息，处理中")
+        logger.debug(f"消息段类型: {message_segment.type}, 数据: {message_segment.data}")
         if message_segment.type == "command":
             logger.info("处理命令")
             return await self.send_command(raw_message_base)
@@ -224,15 +226,18 @@ class SendHandler:
             return 1
 
     async def handle_seg_recursive(self, seg_data: Seg, user_info: UserInfo) -> list:
+        logger.debug(f"处理消息段: type={seg_data.type}, data={seg_data.data}")
         payload: list = []
         if seg_data.type == "seglist":
             # level = self.get_level(seg_data)  # 给以后可能的多层嵌套做准备，此处不使用
             if not seg_data.data:
+                logger.warning("seglist 数据为空")
                 return []
             for seg in seg_data.data:
                 payload = await self.process_message_by_type(seg, payload, user_info)
         else:
             payload = await self.process_message_by_type(seg_data, payload, user_info)
+        logger.debug(f"处理结果: {payload}")
         return payload
 
     async def process_message_by_type(

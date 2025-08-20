@@ -43,16 +43,16 @@ class NapcatServerConfig(ConfigBase):
 
 @dataclass
 class MaiBotServerConfig(ConfigBase):
-    platform_name: str = field(default=ADAPTER_PLATFORM, init=False)
-    """平台名称，“qq”"""
-
     host: str = "localhost"
-    """MaiMCore的主机地址"""
+    """MaiBot 服务器的主机地址"""
 
-    port: int = 8000
-    """MaiMCore的端口号"""
-
-
+    port: int = 8090
+    """MaiBot 服务器的端口号（gRPC 端口）"""
+    
+    @property
+    def platform_name(self) -> str:
+        """平台名称，"qq" """
+        return ADAPTER_PLATFORM
 
 
 @dataclass

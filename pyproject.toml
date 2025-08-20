@@ -3,6 +3,8 @@ name = "MaiBotNapcatAdapter"
 version = "0.4.8"
 description = "A MaiBot adapter for Napcat"
 dependencies = [
+    "grpcio>=1.74.0",
+    "grpcio-tools>=1.74.0",
     "ruff>=0.12.9",
 ]
 

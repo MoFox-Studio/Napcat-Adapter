@@ -8,3 +8,6 @@ pillow
 tomlkit
 rich
 sqlmodel
+grpcio
+grpcio-tools
+protobuf

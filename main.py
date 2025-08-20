@@ -11,7 +11,7 @@ from src.send_handler import send_handler
 from src.config import global_config
 from src.config.features_config import features_manager
 from src.config.migrate_features import auto_migrate_features
-from src.mmc_com_layer import mmc_start_com, mmc_stop_com, router
+from src.mmc_com_layer import mmc_start_com, mmc_stop_com
 from src.response_pool import put_response, check_timeout_response
 from src.websocket_manager import websocket_manager
 
@@ -59,7 +59,7 @@ async def main():
     await features_manager.start_file_watcher(check_interval=2.0)
     logger.info("功能管理器初始化完成")
     
-    message_send_instance.maibot_router = router
+    # message_send_instance.maibot_router = router  # gRPC 模式下不需要设置路由器
     _ = await asyncio.gather(napcat_server(), mmc_start_com(), message_process(), check_timeout_response())
 
 
