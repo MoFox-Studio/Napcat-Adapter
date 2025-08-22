@@ -285,8 +285,7 @@ class MessageHandler:
                     return None  # 缓冲成功，不立即发送
                 # 如果缓冲失败（消息包含非文本元素），走正常处理流程
                 logger.info(f"❌ 消息缓冲失败，包含非文本元素，走正常处理流程: {user_info.user_id}")
-                # 调用handle_real_message进行正常处理
-                return await self.handle_real_message(raw_message)
+                # 缓冲失败时继续执行后面的正常处理流程，不要直接返回
 
         logger.debug(f"准备发送消息到MaiBot，消息段数量: {len(seg_message)}")
         for i, seg in enumerate(seg_message):
@@ -343,11 +342,14 @@ class MessageHandler:
                         else:
                             logger.warning("reply处理失败")
                 case RealMessageType.image:
+                    logger.debug(f"开始处理图片消息段")
                     ret_seg = await self.handle_image_message(sub_message)
                     if ret_seg:
                         seg_message.append(ret_seg)
+                        logger.debug(f"图片处理成功，添加到消息段")
                     else:
                         logger.warning("image处理失败")
+                    logger.debug(f"图片消息段处理完成")
                 case RealMessageType.record:
                     ret_seg = await self.handle_record_message(sub_message)
                     if ret_seg:
@@ -395,6 +397,8 @@ class MessageHandler:
                     logger.warning("不支持转发消息节点解析")
                 case _:
                     logger.warning(f"未知消息类型: {sub_message_type}")
+        
+        logger.debug(f"handle_real_message完成，处理了{len(real_message)}个消息段，生成了{len(seg_message)}个seg")
         return seg_message
 
     async def handle_text_message(self, raw_message: dict) -> Seg:
@@ -437,7 +441,9 @@ class MessageHandler:
         message_data: dict = raw_message.get("data")
         image_sub_type = message_data.get("sub_type")
         try:
+            logger.debug(f"开始下载图片: {message_data.get('url')}")
             image_base64 = await get_image_base64(message_data.get("url"))
+            logger.debug(f"图片下载成功，大小: {len(image_base64)} 字符")
         except Exception as e:
             logger.error(f"图片消息处理失败: {str(e)}")
             return None
