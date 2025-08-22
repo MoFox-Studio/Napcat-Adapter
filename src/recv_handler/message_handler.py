@@ -624,23 +624,35 @@ class MessageHandler:
         Parameters:
             message_list: list: 转发消息列表
         """
-        handled_message, image_count = await self._handle_forward_message(message_list, 0)
+        handled_message, image_count = await self._handle_forward_message(
+            message_list, 0
+        )
         handled_message: Seg
         image_count: int
         if not handled_message:
             return None
+
+        processed_message: Seg
         if image_count < 5 and image_count > 0:
             # 处理图片数量小于5的情况，此时解析图片为base64
             logger.trace("图片数量小于5，开始解析图片为base64")
-            return await self._recursive_parse_image_seg(handled_message, True)
+            processed_message = await self._recursive_parse_image_seg(
+                handled_message, True
+            )
         elif image_count > 0:
             logger.trace("图片数量大于等于5，开始解析图片为占位符")
             # 处理图片数量大于等于5的情况，此时解析图片为占位符
-            return await self._recursive_parse_image_seg(handled_message, False)
+            processed_message = await self._recursive_parse_image_seg(
+                handled_message, False
+            )
         else:
             # 处理没有图片的情况，此时直接返回
             logger.trace("没有图片，直接返回")
-            return handled_message
+            processed_message = handled_message
+
+        # 添加转发消息提示
+        forward_hint = Seg(type="text", data="这是一条转发消息：\n")
+        return Seg(type="seglist", data=[forward_hint, processed_message])
 
     async def _recursive_parse_image_seg(self, seg_data: Seg, to_image: bool) -> Seg:
         # sourcery skip: merge-else-if-into-elif
