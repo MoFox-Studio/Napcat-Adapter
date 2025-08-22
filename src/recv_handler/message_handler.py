@@ -281,8 +281,11 @@ class MessageHandler:
                 )
                 
                 if buffered:
-                    logger.debug(f"✅ 文本消息已成功缓冲: {user_info.user_id}")
+                    logger.info(f"✅ 文本消息已成功缓冲: {user_info.user_id}")
                     return None  # 缓冲成功，不立即发送
+                # 如果缓冲失败（消息包含非文本元素），走正常处理流程
+                logger.info(f"❌ 消息缓冲失败，包含非文本元素，走正常处理流程: {user_info.user_id}")
+                # 调用handle_real_message进行正常处理
                 return await self.handle_real_message(raw_message)
 
         logger.debug(f"准备发送消息到MaiBot，消息段数量: {len(seg_message)}")
