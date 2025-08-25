@@ -40,4 +40,4 @@ message_buffer_enable_private = true            # 是否启用私聊消息缓冲
 message_buffer_interval = 3.0                   # 消息合并间隔时间（秒），在此时间内的连续消息将被合并
 message_buffer_initial_delay = 0.5              # 消息缓冲初始延迟（秒），收到第一条消息后等待此时间开始合并
 message_buffer_max_components = 50              # 单个会话最大缓冲消息组件数量，超过此数量将强制合并
-message_buffer_block_prefixes = ["/", "!", "！", ".", "。", "#", "%"]  # 消息缓冲屏蔽前缀，以这些前缀开头的消息不会被缓冲
+message_buffer_block_prefixes = ["/"]  # 消息缓冲屏蔽前缀，以这些前缀开头的消息不会被缓冲

@@ -1,5 +1,5 @@
 [inner]
-version = "0.2.0" # 版本号
+version = "0.2.1" # 版本号
 # 请勿修改版本号，除非你知道自己在做什么
 
 [nickname] # 现在没用
@@ -19,6 +19,10 @@ port = 8000        # 麦麦在.env文件中设置的端口，即PORT字段
 
 [voice] # 发送语音设置
 use_tts = false # 是否使用tts语音（请确保你配置了tts并有对应的adapter）
+
+[slicing] # WebSocket消息切片设置
+max_frame_size = 64  # WebSocket帧的最大大小，单位为字节，默认64KB
+delay_ms = 10       # 切片发送间隔时间，单位为毫秒
 
 [debug]
 level = "INFO" # 日志等级（DEBUG, INFO, WARNING, ERROR, CRITICAL）

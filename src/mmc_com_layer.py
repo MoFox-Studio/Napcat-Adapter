@@ -21,4 +21,10 @@ async def mmc_start_com():
 
 
 async def mmc_stop_com():
-    await router.stop()
+    """停止 MaiBot 通信连接"""
+    try:
+        await router.stop()
+        logger.info("MaiBot 连接已关闭")
+    except Exception as e:
+        logger.warning(f"关闭 MaiBot 连接时出错: {e}")
+        # 不重新抛出异常，允许优雅关闭继续进行

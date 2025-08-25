@@ -21,6 +21,7 @@ from .utils import get_image_format, convert_image_to_gif
 from .recv_handler.message_sending import message_send_instance
 from .websocket_manager import websocket_manager
 from .config.features_config import features_manager
+from .message_chunker import chunker
 
 
 class SendHandler:
@@ -614,6 +615,7 @@ class SendHandler:
         
         try:
             await connection.send(payload)
+            
             response = await get_response(request_uuid)
         except TimeoutError:
             logger.error("发送消息超时，未收到响应")
