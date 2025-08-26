@@ -330,12 +330,12 @@ Licensed under the GNU General Public License v3.0
 
 **💬 遇到问题？欢迎提交 Issue 或 PR！**
 
-**🔗 相关项目：[MaiBot-Pro-Max](https://github.com/MaiBot-Plus/MaiMbot-Pro-Max)**
+**🔗 相关项目：[墨狐Bot](https://github.com/MoFox-Studio/MoFox_Bot)**
 
 ---
 
 > **⚠️ 再次提醒：本项目为第三方改版，请勿将问题反馈至原项目**
 
-Made with ❤️ by [MaiBot-Plus Community](https://github.com/MaiBot-Plus)
+Made with ❤️ by [MoFox-Studio](https://github.com/MoFox-Studio/Napcat-Adapter)
 
 </div>
