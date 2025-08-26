@@ -505,7 +505,7 @@ class MessageHandler:
                         content_parts.append(f"链接: {extracted_info['short_url']}")
                     
                     formatted_content = "\n".join(content_parts)
-                    return Seg(type="text", data=f"这是一条小程序分享消息，不要用url解析工具\n{formatted_content}")
+                    return Seg(type="text", data=f"这是一条小程序分享消息，可以根据来源，考虑使用对应解析工具\n{formatted_content}")
             
             # 如果没有提取到关键信息，返回None
             return None
