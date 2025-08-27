@@ -342,14 +342,14 @@ class MessageHandler:
                         else:
                             logger.warning("reply处理失败")
                 case RealMessageType.image:
-                    logger.debug(f"开始处理图片消息段")
+                    logger.debug("开始处理图片消息段")
                     ret_seg = await self.handle_image_message(sub_message)
                     if ret_seg:
                         seg_message.append(ret_seg)
-                        logger.debug(f"图片处理成功，添加到消息段")
+                        logger.debug("图片处理成功，添加到消息段")
                     else:
                         logger.warning("image处理失败")
-                    logger.debug(f"图片消息段处理完成")
+                    logger.debug("图片消息段处理完成")
                 case RealMessageType.record:
                     ret_seg = await self.handle_record_message(sub_message)
                     if ret_seg:

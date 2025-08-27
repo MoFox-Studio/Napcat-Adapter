@@ -21,7 +21,6 @@ from .utils import get_image_format, convert_image_to_gif
 from .recv_handler.message_sending import message_send_instance
 from .websocket_manager import websocket_manager
 from .config.features_config import features_manager
-from .message_chunker import chunker
 
 
 class SendHandler:
