@@ -16,6 +16,12 @@ from src.response_pool import put_response, check_timeout_response
 from src.websocket_manager import websocket_manager
 from src.message_chunker import chunker, reassembler
 
+# UI日志适配器 - 最小侵入式集成
+try:
+    import ui_log_adapter  # 自动设置UI日志传输
+except ImportError:
+    pass
+
 message_queue = asyncio.Queue()
 
 
